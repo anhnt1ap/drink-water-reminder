@@ -59,6 +59,82 @@ final class DataManagerTests: XCTestCase {
         XCTAssertEqual(dataManager.records.count, 1)
     }
 
+    func testDrinksTodayMultiple() {
+        let today = Date()
+        let records = [
+            DrinkRecord(timestamp: today.addingTimeInterval(-3600), points: 10),
+            DrinkRecord(timestamp: today.addingTimeInterval(-1800), points: 10),
+            DrinkRecord(timestamp: today.addingTimeInterval(-600), points: 10)
+        ]
+        dataManager.setRecordsForTesting(records)
+        XCTAssertEqual(dataManager.drinksToday, 3)
+    }
+
+    func testPointsToday() {
+        let today = Date()
+        let records = [
+            DrinkRecord(timestamp: today.addingTimeInterval(-3600), points: 10),
+            DrinkRecord(timestamp: today.addingTimeInterval(-1800), points: 15)
+        ]
+        dataManager.setRecordsForTesting(records)
+        XCTAssertEqual(dataManager.pointsToday, 25)
+    }
+
+    func testStreakCalculation() {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        var records: [DrinkRecord] = []
+        for dayOffset in [0, -1, -2] {
+            let day = calendar.date(byAdding: .day, value: dayOffset, to: today)!
+            for hour in 0..<8 {
+                let time = calendar.date(byAdding: .hour, value: hour + 8, to: day)!
+                records.append(DrinkRecord(timestamp: time, points: 10))
+            }
+        }
+        dataManager.setRecordsForTesting(records)
+        XCTAssertEqual(dataManager.currentStreak, 3)
+    }
+
+    func testStreakBreaksOnMissedDay() {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        var records: [DrinkRecord] = []
+        for hour in 0..<8 {
+            let time = calendar.date(byAdding: .hour, value: hour + 8, to: today)!
+            records.append(DrinkRecord(timestamp: time, points: 10))
+        }
+        let twoDaysAgo = calendar.date(byAdding: .day, value: -2, to: today)!
+        for hour in 0..<8 {
+            let time = calendar.date(byAdding: .hour, value: hour + 8, to: twoDaysAgo)!
+            records.append(DrinkRecord(timestamp: time, points: 10))
+        }
+        dataManager.setRecordsForTesting(records)
+        XCTAssertEqual(dataManager.currentStreak, 1)
+    }
+
+    func testLongestStreak() {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        var records: [DrinkRecord] = []
+        for dayOffset in (-14)...(-10) {
+            let day = calendar.date(byAdding: .day, value: dayOffset, to: today)!
+            for hour in 0..<8 {
+                let time = calendar.date(byAdding: .hour, value: hour + 8, to: day)!
+                records.append(DrinkRecord(timestamp: time, points: 10))
+            }
+        }
+        for dayOffset in [-1, 0] {
+            let day = calendar.date(byAdding: .day, value: dayOffset, to: today)!
+            for hour in 0..<8 {
+                let time = calendar.date(byAdding: .hour, value: hour + 8, to: day)!
+                records.append(DrinkRecord(timestamp: time, points: 10))
+            }
+        }
+        dataManager.setRecordsForTesting(records)
+        XCTAssertEqual(dataManager.currentStreak, 2)
+        XCTAssertEqual(dataManager.longestStreak, 5)
+    }
+
     func testPruneOldRecords() throws {
         let oldDate = Calendar.current.date(byAdding: .day, value: -91, to: Date())!
         let recentDate = Date().addingTimeInterval(-3600)

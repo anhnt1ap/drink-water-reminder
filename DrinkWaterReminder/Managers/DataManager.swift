@@ -76,6 +76,89 @@ class DataManager: ObservableObject {
         }
     }
 
+    // MARK: - Computed Stats
+
+    var drinksToday: Int {
+        let startOfDay = Calendar.current.startOfDay(for: Date())
+        return records.filter { $0.timestamp >= startOfDay }.count
+    }
+
+    var pointsToday: Int {
+        let startOfDay = Calendar.current.startOfDay(for: Date())
+        return records.filter { $0.timestamp >= startOfDay }.reduce(0) { $0 + $1.points }
+    }
+
+    var totalLifetimePoints: Int {
+        records.reduce(0) { $0 + $1.points }
+    }
+
+    var currentStreak: Int {
+        calculateStreak().current
+    }
+
+    var longestStreak: Int {
+        calculateStreak().longest
+    }
+
+    private func calculateStreak() -> (current: Int, longest: Int) {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+
+        var drinksPerDay: [Date: Int] = [:]
+        for record in records {
+            let day = calendar.startOfDay(for: record.timestamp)
+            drinksPerDay[day, default: 0] += 1
+        }
+
+        var currentStreak = 0
+        var longestStreak = 0
+        var runningStreak = 0
+
+        let allDays = drinksPerDay.keys.sorted(by: >)
+        guard !allDays.isEmpty else { return (0, 0) }
+
+        let earliestDay = allDays.last!
+        let totalDays = calendar.dateComponents([.day], from: earliestDay, to: today).day! + 1
+
+        var foundCurrentStreak = false
+
+        for dayOffset in 0..<totalDays {
+            let day = calendar.date(byAdding: .day, value: -dayOffset, to: today)!
+            let startOfThatDay = calendar.startOfDay(for: day)
+            let count = drinksPerDay[startOfThatDay] ?? 0
+
+            if count >= dailyGoal {
+                runningStreak += 1
+                if !foundCurrentStreak {
+                    currentStreak = runningStreak
+                }
+            } else {
+                if !foundCurrentStreak {
+                    foundCurrentStreak = true
+                    currentStreak = runningStreak
+                }
+                longestStreak = max(longestStreak, runningStreak)
+                runningStreak = 0
+            }
+        }
+        longestStreak = max(longestStreak, runningStreak)
+
+        return (currentStreak, longestStreak)
+    }
+
+    /// Returns drink counts for the past 7 days (index 0 = 6 days ago, index 6 = today)
+    var weeklyData: [(date: Date, count: Int)] {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        return (0..<7).reversed().map { daysAgo in
+            let day = calendar.date(byAdding: .day, value: -daysAgo, to: today)!
+            let count = records.filter {
+                calendar.isDate($0.timestamp, inSameDayAs: day)
+            }.count
+            return (date: day, count: count)
+        }
+    }
+
     // MARK: - Test Helper
 
     #if DEBUG
