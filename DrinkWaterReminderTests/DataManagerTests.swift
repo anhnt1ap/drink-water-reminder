@@ -16,3 +16,61 @@ final class DrinkRecordTests: XCTestCase {
         XCTAssertEqual(decoded.timestamp, original.timestamp)
     }
 }
+
+@MainActor
+final class DataManagerTests: XCTestCase {
+    var dataManager: DataManager!
+    var testDirectory: URL!
+
+    override func setUp() {
+        super.setUp()
+        testDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+        try? FileManager.default.createDirectory(at: testDirectory, withIntermediateDirectories: true)
+        dataManager = DataManager(storageDirectory: testDirectory)
+    }
+
+    override func tearDown() {
+        try? FileManager.default.removeItem(at: testDirectory)
+        super.tearDown()
+    }
+
+    func testInitialStateIsEmpty() {
+        XCTAssertTrue(dataManager.records.isEmpty)
+    }
+
+    func testAddRecord() {
+        let added = dataManager.addRecordIfAllowed(points: 10)
+        XCTAssertTrue(added)
+        XCTAssertEqual(dataManager.records.count, 1)
+        XCTAssertEqual(dataManager.records.first?.points, 10)
+    }
+
+    func testPersistenceAcrossInstances() {
+        dataManager.addRecordIfAllowed(points: 10)
+        let secondManager = DataManager(storageDirectory: testDirectory)
+        XCTAssertEqual(secondManager.records.count, 1)
+    }
+
+    func testCooldownPreventsRapidLogs() {
+        dataManager.addRecordIfAllowed(points: 10)
+        let added = dataManager.addRecordIfAllowed(points: 10)
+        XCTAssertFalse(added)
+        XCTAssertEqual(dataManager.records.count, 1)
+    }
+
+    func testPruneOldRecords() throws {
+        let oldDate = Calendar.current.date(byAdding: .day, value: -91, to: Date())!
+        let recentDate = Date().addingTimeInterval(-3600)
+        let records = [
+            DrinkRecord(timestamp: oldDate, points: 10),
+            DrinkRecord(timestamp: recentDate, points: 10)
+        ]
+        dataManager.setRecordsForTesting(records)
+        dataManager.pruneOldRecords()
+        XCTAssertEqual(dataManager.records.count, 1)
+        let remaining = try XCTUnwrap(dataManager.records.first)
+        XCTAssertEqual(remaining.timestamp.timeIntervalSince1970,
+                       recentDate.timeIntervalSince1970, accuracy: 1)
+    }
+}

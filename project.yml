@@ -29,6 +29,8 @@ targets:
       - DrinkWaterReminderTests
       - path: DrinkWaterReminder/Models
         type: group
+      - path: DrinkWaterReminder/Managers
+        type: group
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.apero.DrinkWaterReminderTests
