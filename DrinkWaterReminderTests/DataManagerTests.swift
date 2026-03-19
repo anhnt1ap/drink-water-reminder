@@ -135,6 +135,37 @@ final class DataManagerTests: XCTestCase {
         XCTAssertEqual(dataManager.longestStreak, 5)
     }
 
+    func testBasePoints() {
+        let points = DataManager.calculatePoints(
+            reminderTime: nil,
+            logTime: Date(),
+            currentStreak: 0
+        )
+        XCTAssertEqual(points, 10)
+    }
+
+    func testBonusPointsForPromptResponse() {
+        let reminderTime = Date()
+        let logTime = reminderTime.addingTimeInterval(60)
+        let points = DataManager.calculatePoints(
+            reminderTime: reminderTime,
+            logTime: logTime,
+            currentStreak: 0
+        )
+        XCTAssertEqual(points, 15)
+    }
+
+    func testNoBonusIfLateResponse() {
+        let reminderTime = Date()
+        let logTime = reminderTime.addingTimeInterval(180)
+        let points = DataManager.calculatePoints(
+            reminderTime: reminderTime,
+            logTime: logTime,
+            currentStreak: 0
+        )
+        XCTAssertEqual(points, 10)
+    }
+
     func testPruneOldRecords() throws {
         let oldDate = Calendar.current.date(byAdding: .day, value: -91, to: Date())!
         let recentDate = Date().addingTimeInterval(-3600)

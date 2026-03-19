@@ -159,6 +159,39 @@ class DataManager: ObservableObject {
         }
     }
 
+    // MARK: - Points Calculation
+
+    static func calculatePoints(
+        reminderTime: Date?,
+        logTime: Date,
+        currentStreak: Int
+    ) -> Int {
+        var points = 10
+
+        if let reminder = reminderTime,
+           logTime.timeIntervalSince(reminder) <= 120 {
+            points += 5
+        }
+
+        return points
+    }
+
+    /// Check and return milestone bonus after logging a drink
+    func streakMilestoneBonus() -> Int {
+        switch currentStreak {
+        case 7: return 50
+        case 30: return 100
+        default: return 0
+        }
+    }
+
+    /// Add milestone bonus points as a separate record
+    func addMilestoneBonus(_ bonus: Int) {
+        let record = DrinkRecord(timestamp: Date(), points: bonus)
+        records.append(record)
+        saveRecords()
+    }
+
     // MARK: - Test Helper
 
     #if DEBUG
