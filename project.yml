@@ -1,0 +1,33 @@
+name: DrinkWaterReminder
+options:
+  bundleIdPrefix: com.apero
+  deploymentTarget:
+    macOS: "13.0"
+  xcodeVersion: "15.0"
+  generateEmptyDirectories: true
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    MACOSX_DEPLOYMENT_TARGET: "13.0"
+targets:
+  DrinkWaterReminder:
+    type: application
+    platform: macOS
+    sources:
+      - DrinkWaterReminder
+    settings:
+      base:
+        INFOPLIST_FILE: DrinkWaterReminder/Info.plist
+        CODE_SIGN_ENTITLEMENTS: DrinkWaterReminder/DrinkWaterReminder.entitlements
+        PRODUCT_BUNDLE_IDENTIFIER: com.apero.DrinkWaterReminder
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+  DrinkWaterReminderTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - DrinkWaterReminderTests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.apero.DrinkWaterReminderTests
+        GENERATE_INFOPLIST_FILE: YES
