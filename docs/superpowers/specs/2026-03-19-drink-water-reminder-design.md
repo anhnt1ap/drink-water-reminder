@@ -14,6 +14,18 @@ A lightweight macOS menu bar app that reminds users to stand up and drink water 
 
 **Approach:** Pure SwiftUI `MenuBarExtra` with `.window` style popover. No dock icon, no main window. The entire app lives in the menu bar.
 
+**App entry point:**
+```swift
+@main struct DrinkWaterReminderApp: App {
+    var body: some Scene {
+        MenuBarExtra("Drink Water", systemImage: "drop.fill") {
+            MainPopoverView()
+        }
+        .menuBarExtraStyle(.window)
+    }
+}
+```
+
 **Target:** macOS 13+ (Ventura) — required for `MenuBarExtra`, SwiftUI `Charts`, `SMAppService`.
 
 **Dependencies:** None. Pure SwiftUI + system frameworks.
@@ -24,7 +36,7 @@ A lightweight macOS menu bar app that reminds users to stand up and drink water 
 
 **Menu bar icon:** SF Symbol water drop (`drop.fill`) with countdown text beside it (e.g., `12:34`). When the timer reaches zero, the icon changes color (blue to red/orange).
 
-**Popover layout (~300x450pt), top to bottom:**
+**Popover layout (~300x450pt), top to bottom.** Each tab's content wrapped in a fixed `.frame(width: 300, height: 450)` to prevent awkward resizing between tabs:
 
 1. **Header** — App name / greeting, current streak badge
 2. **Countdown ring** — Circular progress indicator showing time until next drink, with minutes:seconds in the center
@@ -47,11 +59,15 @@ A lightweight macOS menu bar app that reminds users to stand up and drink water 
 
 **Background behavior:** `MenuBarExtra` apps stay alive in the background. If the Mac sleeps and wakes past the deadline, the app detects `nextDrinkDate` is in the past and immediately shows the overdue state.
 
-**Notification permissions:** Requested on first launch. If denied, the app still works with icon-change-only fallback.
+**Notification permissions:** Requested on first launch. If denied, the app still works with icon-change-only fallback. The icon color change serves as the always-available fallback regardless of macOS Focus/DND mode — no special DND handling required.
+
+**Notification sound:** Uses default system notification sound.
 
 ## Data Model & Persistence
 
-All data stored locally via `UserDefaults` with `@AppStorage` / `Codable`.
+**Simple settings** (`reminderInterval`, `dailyGoal`, `launchAtLogin`) stored via `@AppStorage` in `UserDefaults`.
+
+**`DrinkRecord` array** stored as a JSON file in `Application Support/DrinkWaterReminder/drink_records.json` using `JSONEncoder`/`JSONDecoder`. `@AppStorage` does not natively support `Codable` arrays, and a file-based store is more appropriate for a growing collection. `DataManager` owns reads/writes to this file.
 
 ### DrinkRecord
 
@@ -59,12 +75,15 @@ All data stored locally via `UserDefaults` with `@AppStorage` / `Codable`.
 - `timestamp: Date`
 - `points: Int`
 
-### UserStats (computed from DrinkRecord array)
+### UserStats (computed, not stored)
 
-- `dailyGoal: Int` (default 8)
+Not a stored model. `UserStats` contains static/computed functions in `DataManager` that derive stats from the `DrinkRecord` array:
+
+- `drinksToday: Int`
 - `currentStreak: Int` (consecutive days meeting goal)
 - `longestStreak: Int`
 - `totalLifetimePoints: Int`
+- `pointsToday: Int`
 
 ### Settings
 
@@ -75,8 +94,9 @@ All data stored locally via `UserDefaults` with `@AppStorage` / `Codable`.
 ### Data Flow
 
 - `DrinkRecord` array is the source of truth — all stats are computed from it
-- On each new day's first launch, check if yesterday's goal was met and update streak
-- Records older than 90 days pruned to keep `UserDefaults` light
+- **Streak calculation:** On launch, check all days between the last recorded drink date and today. If any day is missing its goal, reset the streak to 0 (or to the count of consecutive goal-met days ending at today). This handles multi-day gaps correctly.
+- **Pruning:** Runs once on each app launch, removing records with timestamps older than 90 days
+- **Anti-abuse:** Minimum 1-minute cooldown between drink logs to prevent accidental double-taps
 
 ### Points System
 
@@ -97,7 +117,7 @@ All data stored locally via `UserDefaults` with `@AppStorage` / `Codable`.
 
 - Bar chart: glasses per day, past 7 days
 - Built with SwiftUI `Charts` framework (native, no external libs)
-- X-axis: day labels (Mon–Sun)
+- X-axis: rolling 7 days ending today
 - Y-axis: number of glasses
 - Horizontal dashed line at daily goal level
 - Bars colored: green (goal met) vs muted gray (not met)
@@ -106,7 +126,7 @@ All data stored locally via `UserDefaults` with `@AppStorage` / `Codable`.
 
 - **Reminder interval** — Picker: 15 / 30 / 45 / 60 minutes (default 30)
 - **Daily goal** — Stepper: 1–20 glasses (default 8)
-- **Launch at login** — Toggle via `SMAppService`
+- **Launch at login** — Toggle via `SMAppService`. Read current status from `SMAppService.mainApp.status` on launch to sync toggle state. Wrap `register()`/`unregister()` in do-catch with user-facing error alert.
 - **About** — App version, tagline
 
 Changes take effect immediately (timer resets to new interval on save).
