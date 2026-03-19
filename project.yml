@@ -27,6 +27,8 @@ targets:
     platform: macOS
     sources:
       - DrinkWaterReminderTests
+      - path: DrinkWaterReminder/Models
+        type: group
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.apero.DrinkWaterReminderTests
