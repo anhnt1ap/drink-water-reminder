@@ -8,6 +8,7 @@ struct SettingsView: View {
     @State private var launchAtLogin: Bool = false
     @State private var showError: Bool = false
     @State private var errorMessage: String = ""
+    @State private var customMinutes: String = ""
 
     private let intervalOptions = [15, 30, 45, 60]
 
@@ -19,14 +20,36 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Reminder Interval")
                     .font(.subheadline.bold())
-                Picker("", selection: $dataManager.reminderInterval) {
+                Picker("", selection: Binding(
+                    get: {
+                        intervalOptions.contains(dataManager.reminderInterval)
+                            ? dataManager.reminderInterval : -1
+                    },
+                    set: { newValue in
+                        if newValue != -1 {
+                            dataManager.reminderInterval = newValue
+                            customMinutes = ""
+                            timerManager.logDrink(intervalMinutes: newValue)
+                        }
+                    }
+                )) {
                     ForEach(intervalOptions, id: \.self) { minutes in
                         Text("\(minutes) min").tag(minutes)
                     }
+                    Text("Custom").tag(-1)
                 }
                 .pickerStyle(.segmented)
-                .onChange(of: dataManager.reminderInterval) { newValue in
-                    timerManager.logDrink(intervalMinutes: newValue)
+
+                HStack(spacing: 8) {
+                    TextField("1–120", text: $customMinutes)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 70)
+                        .onSubmit {
+                            applyCustomInterval()
+                        }
+                    Text("min")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                 }
             }
 
@@ -78,12 +101,26 @@ struct SettingsView: View {
         .padding()
         .onAppear {
             launchAtLogin = SMAppService.mainApp.status == .enabled
+            if !intervalOptions.contains(dataManager.reminderInterval) {
+                customMinutes = "\(dataManager.reminderInterval)"
+            }
         }
         .alert("Error", isPresented: $showError) {
             Button("OK") {}
         } message: {
             Text(errorMessage)
         }
+    }
+
+    private func applyCustomInterval() {
+        guard let value = Int(customMinutes) else {
+            customMinutes = "\(dataManager.reminderInterval)"
+            return
+        }
+        let clamped = min(max(value, 1), 120)
+        customMinutes = "\(clamped)"
+        dataManager.reminderInterval = clamped
+        timerManager.logDrink(intervalMinutes: clamped)
     }
 
     private func toggleLaunchAtLogin(enabled: Bool) {
