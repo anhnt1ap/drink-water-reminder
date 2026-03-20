@@ -9,6 +9,15 @@ class DataManager: ObservableObject {
     @Published var dailyGoal: Int {
         didSet { UserDefaults.standard.set(dailyGoal, forKey: "dailyGoal") }
     }
+    @Published var notificationSound: String {
+        didSet { UserDefaults.standard.set(notificationSound, forKey: "notificationSound") }
+    }
+
+    static let availableSounds = [
+        "Default", "Basso", "Blow", "Bottle", "Frog", "Funk",
+        "Glass", "Hero", "Morse", "Ping", "Pop", "Purr",
+        "Sosumi", "Submarine", "Tink"
+    ]
 
     private let storageDirectory: URL
     private let cooldownInterval: TimeInterval = 60 // 1 minute
@@ -20,6 +29,7 @@ class DataManager: ObservableObject {
     init(storageDirectory: URL? = nil) {
         self.reminderInterval = UserDefaults.standard.object(forKey: "reminderInterval") as? Int ?? 30
         self.dailyGoal = UserDefaults.standard.object(forKey: "dailyGoal") as? Int ?? 8
+        self.notificationSound = UserDefaults.standard.string(forKey: "notificationSound") ?? "Default"
         if let dir = storageDirectory {
             self.storageDirectory = dir
         } else {

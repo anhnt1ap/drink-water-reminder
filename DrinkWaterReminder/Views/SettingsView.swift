@@ -1,5 +1,6 @@
 import SwiftUI
 import ServiceManagement
+import AppKit
 
 struct SettingsView: View {
     @ObservedObject var dataManager: DataManager
@@ -37,6 +38,24 @@ struct SettingsView: View {
                     value: $dataManager.dailyGoal,
                     in: 1...20
                 )
+            }
+
+            // Notification Sound
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Notification Sound")
+                    .font(.subheadline.bold())
+                Picker("", selection: $dataManager.notificationSound) {
+                    ForEach(DataManager.availableSounds, id: \.self) { sound in
+                        Text(sound).tag(sound)
+                    }
+                }
+                .pickerStyle(.menu)
+                .onChange(of: dataManager.notificationSound) { newValue in
+                    timerManager.selectedSound = newValue
+                    if newValue != "Default" {
+                        NSSound(named: NSSound.Name(newValue))?.play()
+                    }
+                }
             }
 
             Toggle("Launch at Login", isOn: $launchAtLogin)

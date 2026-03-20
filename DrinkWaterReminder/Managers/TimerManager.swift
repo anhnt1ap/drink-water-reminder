@@ -11,6 +11,7 @@ class TimerManager: ObservableObject {
 
     private var timerCancellable: AnyCancellable?
     private var intervalMinutes: Int = 30
+    var selectedSound: String = "Default"
 
     func start(intervalMinutes: Int) {
         self.intervalMinutes = intervalMinutes
@@ -84,7 +85,11 @@ class TimerManager: ObservableObject {
         let content = UNMutableNotificationContent()
         content.title = "Time to drink water!"
         content.body = "Stand up, stretch, and drink a glass of water."
-        content.sound = .default
+        if selectedSound == "Default" {
+            content.sound = .default
+        } else {
+            content.sound = UNNotificationSound(named: UNNotificationSoundName("\(selectedSound).aiff"))
+        }
 
         let request = UNNotificationRequest(
             identifier: "drinkReminder",

@@ -57,6 +57,7 @@ struct MainPopoverView: View {
         .frame(width: 300, height: 450)
         .onAppear {
             timerManager.requestNotificationPermission()
+            timerManager.selectedSound = dataManager.notificationSound
             if timerManager.nextDrinkDate == nil {
                 timerManager.start(intervalMinutes: dataManager.reminderInterval)
             }
